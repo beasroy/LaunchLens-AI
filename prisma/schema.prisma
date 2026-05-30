@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String?
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ideas Idea[]
+}
+
+model Idea {
+  id             String   @id @default(cuid())
+  title          String
+  description    String   @db.Text
+  industry       String?
+  targetAudience String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  analyses Analysis[]
+
+  @@index([userId])
+}
+
+model Analysis {
+  id                String   @id @default(cuid())
+  validationScore   Int?
+  problemStatement  String?  @db.Text
+  marketPotential   String?  @db.Text
+  risks             Json?
+  opportunities     Json?
+  competitors       Json?
+  mvpFeatures       Json?
+  createdAt         DateTime @default(now())
+
+  ideaId String
+  idea   Idea   @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
+}
