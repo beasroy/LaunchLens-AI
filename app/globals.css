@@ -128,3 +128,59 @@
     @apply font-sans;
   }
 }
+
+
+.gemini-mesh {
+  background-color: oklch(0.99 0.005 280);
+  background-image:
+    radial-gradient(
+      ellipse 80% 50% at 10% -10%,
+      oklch(0.88 0.12 265 / 0.35),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 60% 45% at 90% 0%,
+      oklch(0.9 0.1 330 / 0.28),
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse 50% 40% at 50% 100%,
+      oklch(0.92 0.08 200 / 0.22),
+      transparent 55%
+    );
+}
+
+.gemini-gradient-text {
+  background: linear-gradient(
+    105deg,
+    oklch(0.45 0.2 265) 0%,
+    oklch(0.5 0.18 310) 45%,
+    oklch(0.55 0.16 25) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gemini-btn-gradient {
+  background: linear-gradient(
+    135deg,
+    oklch(0.55 0.22 265),
+    oklch(0.58 0.2 310),
+    oklch(0.62 0.18 25)
+  );
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px oklch(0.5 0.2 265 / 0.35);
+}
+
+.gemini-btn-gradient:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 6px 20px oklch(0.5 0.2 265 / 0.45);
+}
+
+.gemini-card-glow {
+  box-shadow:
+    0 1px 2px oklch(0.5 0.1 265 / 0.06),
+    0 8px 24px oklch(0.5 0.12 280 / 0.08);
+}
