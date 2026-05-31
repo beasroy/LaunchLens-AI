@@ -4,18 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import axios, { isAxiosError } from "axios";
 import { signIn } from "next-auth/react";
-import { useForm } from "react-hook-form";
+import { useForm, type UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { EyeOffIcon, EyeIcon } from "lucide-react";
+import { EyeOffIcon, EyeIcon, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authSchemas, type SignInInput, type SignUpInput } from "@/lib/zod";
@@ -64,7 +57,7 @@ export function AuthForm() {
     setServerError(null);
 
     try {
-      const  signupResponse = await axios.post("/api/auth/signup", values);
+      const signupResponse = await axios.post("/api/auth/signup", values);
       if (signupResponse.status === 201) {
         setMode("signin");
         signInForm.setValue("email", values.email);
@@ -75,7 +68,6 @@ export function AuthForm() {
         ? (error.response?.data?.error ?? "Could not create account")
         : "Could not create account";
       setServerError(message);
-      return;
     }
   }
 
@@ -87,34 +79,26 @@ export function AuthForm() {
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>{mode === "signin" ? "Sign in" : "Create account"}</CardTitle>
-        <CardDescription>
-          {mode === "signin"
-            ? "Use your email and password to continue."
-            : "Register with email and password."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
-          {(["signin", "signup"] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => switchMode(tab)}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                mode === tab
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {tab === "signin" ? "Sign in" : "Sign up"}
-            </button>
-          ))}
-        </div>
+    <div className="rounded-2xl border border-white/80 bg-white/90 p-6 shadow-xl shadow-indigo-500/5 backdrop-blur-xl gemini-card-glow sm:p-8">
+      <div className="grid grid-cols-2 gap-1 rounded-xl bg-indigo-50/80 p-1 ring-1 ring-indigo-100/80">
+        {(["signin", "signup"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => switchMode(tab)}
+            className={cn(
+              "rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+              mode === tab
+                ? "bg-white text-indigo-700 shadow-sm ring-1 ring-indigo-100/80"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {tab === "signin" ? "Sign in" : "Create account"}
+          </button>
+        ))}
+      </div>
 
+      <div className="mt-6">
         {mode === "signin" ? (
           <form
             onSubmit={signInForm.handleSubmit(onSignIn)}
@@ -130,6 +114,7 @@ export function AuthForm() {
                 id="signin-email"
                 type="email"
                 autoComplete="email"
+                className="h-11 rounded-xl border-indigo-100 bg-white/80"
                 aria-invalid={!!signInForm.formState.errors.email}
                 {...signInForm.register("email")}
               />
@@ -139,35 +124,29 @@ export function AuthForm() {
               label="Password"
               error={signInForm.formState.errors.password?.message}
             >
-              <div className="relative">
-                <Input
-                  id="signin-password"
-                  type={seePassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  aria-invalid={!!signInForm.formState.errors.password}
-                  className="pr-9"
-                  {...signInForm.register("password")}
-                />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={seePassword ? "Hide password" : "Show password"}
-                    onClick={() => setSeePassword(!seePassword)}
-                  >
-                    {seePassword ? (
-                      <EyeOffIcon className="h-4 w-4" />
-                    ) : (
-                      <EyeIcon className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
+              <PasswordInput
+                id="signin-password"
+                seePassword={seePassword}
+                onToggle={() => setSeePassword(!seePassword)}
+                autoComplete="current-password"
+                error={!!signInForm.formState.errors.password}
+                registerProps={signInForm.register("password")}
+              />
             </Field>
             {serverError ? <FormError message={serverError} /> : null}
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Signing in…" : "Sign in"}
+            <Button
+              type="submit"
+              className="h-11 w-full rounded-xl gemini-btn-gradient"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Signing in…
+                </>
+              ) : (
+                "Sign in"
+              )}
             </Button>
           </form>
         ) : (
@@ -185,6 +164,7 @@ export function AuthForm() {
                 id="signup-name"
                 type="text"
                 autoComplete="name"
+                className="h-11 rounded-xl border-indigo-100 bg-white/80"
                 aria-invalid={!!signUpForm.formState.errors.name}
                 {...signUpForm.register("name")}
               />
@@ -198,6 +178,7 @@ export function AuthForm() {
                 id="signup-email"
                 type="email"
                 autoComplete="email"
+                className="h-11 rounded-xl border-indigo-100 bg-white/80"
                 aria-invalid={!!signUpForm.formState.errors.email}
                 {...signUpForm.register("email")}
               />
@@ -206,42 +187,79 @@ export function AuthForm() {
               id="signup-password"
               label="Password"
               error={signUpForm.formState.errors.password?.message}
+              hint="At least 8 characters with a letter, number, and symbol"
             >
-              <div className="relative">
-                <Input
-                  id="signup-password"
-                  type={seePassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  aria-invalid={!!signUpForm.formState.errors.password}
-                  className="pr-9"
-                  {...signUpForm.register("password")}
-                />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={seePassword ? "Hide password" : "Show password"}
-                    onClick={() => setSeePassword(!seePassword)}
-                  >
-                    {seePassword ? (
-                      <EyeOffIcon className="h-4 w-4" />
-                    ) : (
-                      <EyeIcon className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
+              <PasswordInput
+                id="signup-password"
+                seePassword={seePassword}
+                onToggle={() => setSeePassword(!seePassword)}
+                autoComplete="new-password"
+                error={!!signUpForm.formState.errors.password}
+                registerProps={signUpForm.register("password")}
+              />
             </Field>
-        
             {serverError ? <FormError message={serverError} /> : null}
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Creating account…" : "Create account"}
+            <Button
+              type="submit"
+              className="h-11 w-full rounded-xl gemini-btn-gradient"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Creating account…
+                </>
+              ) : (
+                "Create account"
+              )}
             </Button>
           </form>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
+  );
+}
+
+function PasswordInput({
+  id,
+  seePassword,
+  onToggle,
+  autoComplete,
+  error,
+  registerProps,
+}: {
+  id: string;
+  seePassword: boolean;
+  onToggle: () => void;
+  autoComplete: string;
+  error: boolean;
+  registerProps: UseFormRegisterReturn<"password">;
+}) {
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        type={seePassword ? "text" : "password"}
+        autoComplete={autoComplete}
+        aria-invalid={error}
+        className="h-11 rounded-xl border-indigo-100 bg-white/80 pr-10"
+        {...registerProps}
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="absolute right-1 top-1/2 -translate-y-1/2 rounded-lg text-muted-foreground"
+        aria-label={seePassword ? "Hide password" : "Show password"}
+        onClick={onToggle}
+      >
+        {seePassword ? (
+          <EyeOffIcon className="size-4" />
+        ) : (
+          <EyeIcon className="size-4" />
+        )}
+      </Button>
+    </div>
   );
 }
 
@@ -249,27 +267,32 @@ function Field({
   id,
   label,
   error,
-  className,
+  hint,
   children,
 }: {
   id: string;
   label: string;
   error?: string;
-  className?: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className={cn("space-y-2", className)}>
-      <Label htmlFor={id}>{label}</Label>
+    <div className="space-y-2">
+      <Label htmlFor={id} className="text-foreground">
+        {label}
+      </Label>
       {children}
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {hint && !error ? (
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      ) : null}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );
 }
 
 function FormError({ message }: { message: string }) {
   return (
-    <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+    <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
       {message}
     </p>
   );

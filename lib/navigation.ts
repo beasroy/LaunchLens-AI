@@ -25,6 +25,6 @@ export const coreNavItems: NavItem[] = [
 ];
 
 export const landingNavItems: NavItem[] = [
+  { href: "#how-it-works", label: "How it works", icon: LayoutDashboard },
   { href: "#features", label: "Features", icon: Lightbulb },
-  { href: "/auth", label: "Sign in", icon: LayoutDashboard },
 ];
