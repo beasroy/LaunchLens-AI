@@ -26,6 +26,7 @@ export default async function IdeasPage() {
     description: idea.description,
     industry: idea.industry,
     targetAudience: idea.targetAudience,
+    primaryTargetMarket: idea.primaryTargetMarket,
     createdAt: idea.createdAt.toISOString(),
     updatedAt: idea.updatedAt.toISOString(),
     latestScore: idea.analyses[0]?.validationScore ?? null,

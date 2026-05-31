@@ -10,17 +10,18 @@ export type NavItem = {
 
 export const coreNavItems: NavItem[] = [
   {
-    href: "/ideas",
-    label: "Ideas",
-    icon: Lightbulb,
-    description: "Validate startup concepts",
-  },
-  {
     href: "/dashboard",
     label: "Dashboard",
     icon: LayoutDashboard,
     description: "Overview & insights",
   },
+  {
+    href: "/ideas",
+    label: "Ideas",
+    icon: Lightbulb,
+    description: "Validate startup concepts",
+  },
+
 ];
 
 export const landingNavItems: NavItem[] = [

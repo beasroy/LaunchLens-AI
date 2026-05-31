@@ -1,17 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  Building2,
   Calendar,
+  Cloud,
+  GraduationCap,
+  Globe,
+  HeartPulse,
   Lightbulb,
+  Pencil,
   Plus,
+  Rocket,
   Sparkles,
+  Trash2,
   TrendingUp,
+  Users,
+  Wallet,
+  type LucideIcon,
 } from "lucide-react";
 
-import { CreateIdeaModal } from "@/components/ideas/create-idea-modal";
+import { deleteIdea } from "@/app/(core)/ideas/actions";
+import { IdeaModal } from "@/components/ideas/idea-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +41,7 @@ export type IdeaListItem = {
   description: string;
   industry: string | null;
   targetAudience: string[];
+  primaryTargetMarket: string | null;
   createdAt: string;
   updatedAt: string;
   latestScore: number | null;
@@ -38,9 +51,60 @@ type IdeasViewProps = {
   ideas: IdeaListItem[];
 };
 
+const INDUSTRY_ICONS: { match: RegExp; icon: LucideIcon }[] = [
+  { match: /health|med|care|bio|pharma/i, icon: HeartPulse },
+  { match: /edu|learn|school|tutor/i, icon: GraduationCap },
+  { match: /fin|bank|pay|crypto/i, icon: Wallet },
+  { match: /saas|cloud|software|tech/i, icon: Cloud },
+];
+
+function getIndustryIcon(industry: string | null): LucideIcon {
+  if (!industry) return Lightbulb;
+  return (
+    INDUSTRY_ICONS.find(({ match }) => match.test(industry))?.icon ?? Rocket
+  );
+}
+
+function getScoreTone(score: number) {
+  if (score >= 75) {
+    return {
+      badge: "bg-emerald-50 text-emerald-700 ring-emerald-200/60",
+      bar: "from-emerald-400 to-teal-500",
+    };
+  }
+  if (score >= 50) {
+    return {
+      badge: "bg-amber-50 text-amber-700 ring-amber-200/60",
+      bar: "from-amber-400 to-orange-500",
+    };
+  }
+  return {
+    badge: "bg-rose-50 text-rose-700 ring-rose-200/60",
+    bar: "from-rose-400 to-pink-500",
+  };
+}
+
 export function IdeasView({ ideas }: IdeasViewProps) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingIdea, setEditingIdea] = useState<IdeaListItem | null>(null);
   const isEmpty = ideas.length === 0;
+
+  function openCreateModal() {
+    setEditingIdea(null);
+    setModalOpen(true);
+  }
+
+  function openEditModal(idea: IdeaListItem) {
+    setEditingIdea(idea);
+    setModalOpen(true);
+  }
+
+  function handleModalOpenChange(open: boolean) {
+    setModalOpen(open);
+    if (!open) {
+      setEditingIdea(null);
+    }
+  }
 
   return (
     <>
@@ -48,6 +112,18 @@ export function IdeasView({ ideas }: IdeasViewProps) {
         <header className="border-b border-indigo-100/60 bg-white/50 px-6 py-8 backdrop-blur-sm lg:px-10">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
+              <div className="mb-3 flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/80 px-3 py-1 text-xs font-medium text-indigo-700">
+                  <Lightbulb className="size-3.5" />
+                  Idea workspace
+                </span>
+                {!isEmpty ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Sparkles className="size-3.5 text-purple-500" />
+                    {ideas.length} {ideas.length === 1 ? "concept" : "concepts"}
+                  </span>
+                ) : null}
+              </div>
               <h1 className="text-3xl font-bold tracking-tight lg:text-4xl">
                 <span className="gemini-gradient-text">Your ideas</span>
               </h1>
@@ -61,7 +137,7 @@ export function IdeasView({ ideas }: IdeasViewProps) {
                 type="button"
                 size="lg"
                 className="h-11 shrink-0 rounded-xl px-6 gemini-btn-gradient"
-                onClick={() => setModalOpen(true)}
+                onClick={openCreateModal}
               >
                 <Plus className="size-5" />
                 New idea
@@ -72,12 +148,12 @@ export function IdeasView({ ideas }: IdeasViewProps) {
 
         <div className="flex-1 px-6 py-8 lg:px-10">
           {isEmpty ? (
-            <EmptyState onAdd={() => setModalOpen(true)} />
+            <EmptyState onAdd={openCreateModal} />
           ) : (
-            <ul className="grid w-full gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <ul className="grid w-full gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {ideas.map((idea) => (
                 <li key={idea.id}>
-                  <IdeaCard idea={idea} />
+                  <IdeaCard idea={idea} onEdit={openEditModal} />
                 </li>
               ))}
             </ul>
@@ -85,7 +161,11 @@ export function IdeasView({ ideas }: IdeasViewProps) {
         </div>
       </div>
 
-      <CreateIdeaModal open={modalOpen} onOpenChange={setModalOpen} />
+      <IdeaModal
+        open={modalOpen}
+        onOpenChange={handleModalOpenChange}
+        idea={editingIdea}
+      />
     </>
   );
 }
@@ -99,7 +179,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
           "backdrop-blur-sm"
         )}
       >
-        <CardHeader className="items-center gap-4">
+        <CardHeader className="flex flex-col items-center justify-center gap-4">
           <span className="flex size-20 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-100 via-purple-50 to-rose-50">
             <Lightbulb className="size-10 text-indigo-600" />
           </span>
@@ -125,79 +205,203 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
   );
 }
 
-function IdeaCard({ idea }: { idea: IdeaListItem }) {
+function IdeaCard({
+  idea,
+  onEdit,
+}: {
+  idea: IdeaListItem;
+  onEdit: (idea: IdeaListItem) => void;
+}) {
+  const [isDeleting, startDeleteTransition] = useTransition();
+
   const preview =
-    idea.description.length > 140
-      ? `${idea.description.slice(0, 140)}…`
+    idea.description.length > 120
+      ? `${idea.description.slice(0, 120)}…`
       : idea.description;
 
-  const date = new Date(idea.updatedAt).toLocaleDateString(undefined, {
+  const date = new Date(idea.updatedAt).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 
+  const IndustryIcon = getIndustryIcon(idea.industry);
+  const scoreTone =
+    idea.latestScore != null ? getScoreTone(idea.latestScore) : null;
+
+  function handleDelete(event: React.MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const confirmed = window.confirm(
+      `Delete "${idea.title}"? This cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    startDeleteTransition(async () => {
+      try {
+        await deleteIdea(idea.id);
+      } catch {
+        window.alert("Could not delete this idea. Please try again.");
+      }
+    });
+  }
+
+  function handleEdit(event: React.MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    onEdit(idea);
+  }
+
   return (
-    <Link href={`/ideas/${idea.id}`} className="block h-full">
-      <Card
+    <Card
+      className={cn(
+        "group relative h-full min-h-[280px] overflow-hidden border-white/80 bg-white/90 transition-all duration-300",
+        "hover:-translate-y-1 hover:border-indigo-200/70 hover:shadow-[0_12px_40px_oklch(0.5_0.12_280_/_0.14)]",
+        "gemini-card-glow backdrop-blur-sm"
+      )}
+    >
+      <div
         className={cn(
-          "h-full min-h-[220px] border-white/80 bg-white/90 transition-all hover:-translate-y-0.5 hover:border-indigo-200/60 gemini-card-glow",
-          "backdrop-blur-sm"
+          "absolute inset-x-0 top-0 h-1 bg-gradient-to-r",
+          scoreTone?.bar ?? "from-indigo-500 via-purple-500 to-rose-400"
         )}
-      >
-        <CardHeader className="gap-3 pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <CardTitle className="line-clamp-2 text-lg leading-snug">
-              {idea.title}
-            </CardTitle>
-            {idea.latestScore != null ? (
-              <Badge
-                variant="secondary"
-                className="shrink-0 gap-1 bg-indigo-50 px-2.5 py-1 text-indigo-700"
-              >
-                <TrendingUp className="size-3.5" />
-                {idea.latestScore}
-              </Badge>
-            ) : null}
+      />
+
+      <div className="pointer-events-none absolute -right-6 -top-6 size-28 rounded-full bg-gradient-to-br from-indigo-100/40 via-purple-100/30 to-transparent opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
+
+      <CardHeader className="gap-4 pb-2">
+        <div className="flex items-start gap-3.5">
+          <span
+            className={cn(
+              "flex size-12 shrink-0 items-center justify-center rounded-2xl",
+              "bg-gradient-to-br from-indigo-100 via-purple-50 to-rose-50",
+              "ring-1 ring-indigo-100/80 transition-transform duration-300 group-hover:scale-105"
+            )}
+          >
+            <IndustryIcon className="size-6 text-indigo-600" />
+          </span>
+
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <Link href={`/ideas/${idea.id}`}>
+                <CardTitle className="line-clamp-2 text-lg leading-snug transition-colors hover:text-indigo-950">
+                  {idea.title}
+                </CardTitle>
+              </Link>
+              <div className="flex shrink-0 items-center gap-1">
+                {idea.latestScore != null && scoreTone ? (
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      "gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold ring-1",
+                      scoreTone.badge
+                    )}
+                  >
+                    <TrendingUp className="size-3.5" />
+                    {idea.latestScore}
+                  </Badge>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="size-8 rounded-lg text-muted-foreground hover:bg-indigo-50 hover:text-indigo-700"
+                  aria-label={`Edit ${idea.title}`}
+                  onClick={handleEdit}
+                >
+                  <Pencil className="size-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="size-8 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  aria-label={`Delete ${idea.title}`}
+                  disabled={isDeleting}
+                  onClick={handleDelete}
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {idea.industry ? (
+                <Badge
+                  variant="outline"
+                  className="w-fit gap-1.5 rounded-lg border-indigo-100 bg-white/80 px-2.5 py-0.5 font-normal text-indigo-700"
+                >
+                  <Building2 className="size-3" />
+                  {idea.industry}
+                </Badge>
+              ) : null}
+              {idea.primaryTargetMarket ? (
+                <Badge
+                  variant="outline"
+                  className="w-fit gap-1.5 rounded-lg border-purple-100 bg-purple-50/50 px-2.5 py-0.5 font-normal text-purple-700"
+                >
+                  <Globe className="size-3" />
+                  {idea.primaryTargetMarket}
+                </Badge>
+              ) : null}
+            </div>
           </div>
-          {idea.industry ? (
-            <Badge variant="outline" className="w-fit">
-              {idea.industry}
-            </Badge>
-          ) : null}
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <p className="line-clamp-4 flex-1 text-sm leading-relaxed text-muted-foreground">
+        </div>
+      </CardHeader>
+
+      <CardContent className="flex flex-col gap-4 pt-0">
+        <Link href={`/ideas/${idea.id}`} className="block flex-1">
+          <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
             {preview}
           </p>
-          {idea.targetAudience.length > 0 ? (
+        </Link>
+
+        {idea.targetAudience.length > 0 ? (
+          <div className="space-y-2">
+            <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-indigo-500/80">
+              <Users className="size-3.5" />
+              Target audience
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {idea.targetAudience.slice(0, 3).map((audience) => (
                 <Badge
                   key={audience}
                   variant="secondary"
-                  className="font-normal"
+                  className="rounded-lg bg-indigo-50/80 px-2.5 py-0.5 font-normal text-indigo-800/80"
                 >
                   {audience}
                 </Badge>
               ))}
               {idea.targetAudience.length > 3 ? (
-                <Badge variant="ghost">+{idea.targetAudience.length - 3}</Badge>
+                <Badge
+                  variant="ghost"
+                  className="rounded-lg px-2 text-indigo-600"
+                >
+                  +{idea.targetAudience.length - 3} more
+                </Badge>
               ) : null}
             </div>
-          ) : null}
-          <div className="flex items-center justify-between border-t border-indigo-50 pt-3 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <Calendar className="size-4" />
-              {date}
-            </span>
-            <span className="flex items-center gap-1 font-medium text-indigo-600">
-              View details
-              <ArrowRight className="size-4" />
-            </span>
           </div>
-        </CardContent>
-      </Card>
-    </Link>
+        ) : null}
+
+        <div className="mt-auto flex items-center justify-between rounded-xl border border-indigo-50/80 bg-gradient-to-r from-indigo-50/40 via-white to-purple-50/30 px-3 py-2.5 text-sm">
+          <span className="flex items-center gap-1.5 text-muted-foreground">
+            <Calendar className="size-3.5 text-indigo-400" />
+            {date}
+          </span>
+          <Link
+            href={`/ideas/${idea.id}`}
+            className="flex items-center gap-1 font-medium text-indigo-600 transition-all hover:gap-2"
+          >
+            View details
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

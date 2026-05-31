@@ -1,14 +1,42 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Building2, Globe, Users } from "lucide-react";
 
+import { AnalysisResults, type SerializedAnalysis } from "@/components/ideas/analysis-results";
+import { AnalysisRunner } from "@/components/ideas/analysis-runner";
+import { Badge } from "@/components/ui/badge";
 import { authOptions } from "@/lib/auth";
+import type { AnalysisResult } from "@/lib/analysis/schema";
 import { prisma } from "@/lib/prisma";
 
 type PageProps = {
   params: Promise<{ id: string }>;
 };
+
+function serializeAnalysis(analysis: {
+  id: string;
+  validationScore: number | null;
+  problemStatement: string | null;
+  marketPotential: string | null;
+  risks: unknown;
+  opportunities: unknown;
+  competitors: unknown;
+  mvpFeatures: unknown;
+  createdAt: Date;
+}): SerializedAnalysis {
+  return {
+    id: analysis.id,
+    validationScore: analysis.validationScore,
+    problemStatement: analysis.problemStatement,
+    marketPotential: analysis.marketPotential,
+    risks: analysis.risks as AnalysisResult["risks"] | null,
+    opportunities: analysis.opportunities as AnalysisResult["opportunities"] | null,
+    competitors: analysis.competitors as AnalysisResult["competitors"] | null,
+    mvpFeatures: analysis.mvpFeatures as AnalysisResult["mvpFeatures"] | null,
+    createdAt: analysis.createdAt.toISOString(),
+  };
+}
 
 export default async function IdeaDetailPage({ params }: PageProps) {
   const session = await getServerSession(authOptions);
@@ -26,6 +54,8 @@ export default async function IdeaDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const analyses = idea.analyses.map(serializeAnalysis);
+
   return (
     <div className="flex min-h-screen flex-1 flex-col">
       <header className="border-b border-indigo-100/60 bg-white/50 px-6 py-8 backdrop-blur-sm lg:px-10">
@@ -39,18 +69,47 @@ export default async function IdeaDetailPage({ params }: PageProps) {
         <h1 className="text-3xl font-bold tracking-tight lg:text-4xl">
           <span className="gemini-gradient-text">{idea.title}</span>
         </h1>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {idea.industry ? (
+            <Badge variant="outline" className="gap-1.5 bg-white/80">
+              <Building2 className="size-3.5" />
+              {idea.industry}
+            </Badge>
+          ) : null}
+          {idea.primaryTargetMarket ? (
+            <Badge variant="outline" className="gap-1.5 bg-white/80">
+              <Globe className="size-3.5" />
+              {idea.primaryTargetMarket}
+            </Badge>
+          ) : null}
+          {idea.targetAudience.map((audience) => (
+            <Badge key={audience} variant="outline" className="gap-1.5 bg-white/80">
+              <Users className="size-3.5" />
+              {audience}
+            </Badge>
+          ))}
+        </div>
       </header>
 
       <div className="flex-1 px-6 py-8 lg:px-10">
-        <div className="max-w-4xl">
+        <div className="max-w-6xl">
           <p className="text-lg leading-relaxed whitespace-pre-wrap text-muted-foreground">
             {idea.description}
           </p>
-          {idea.analyses.length === 0 ? (
-            <p className="mt-10 rounded-2xl border border-dashed border-indigo-200 bg-white/80 p-8 text-center text-muted-foreground">
-              AI analysis coming soon — run validation from this page.
+
+          <AnalysisRunner
+            ideaId={idea.id}
+            hasAnalysis={analyses.length > 0}
+          />
+
+          {analyses.length === 0 ? (
+            <p className="mt-6 rounded-2xl border border-dashed border-indigo-200 bg-white/80 p-8 text-center text-muted-foreground">
+              No validation yet — run analysis above to get risks, competitors,
+              and MVP recommendations.
             </p>
-          ) : null}
+          ) : (
+            <AnalysisResults analyses={analyses} />
+          )}
         </div>
       </div>
     </div>

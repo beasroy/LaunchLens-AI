@@ -6,17 +6,10 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { CreateIdeaInput, ideaSchemas } from "@/lib/zod";
-
-function parseTargetAudience(value: FormDataEntryValue | null): string[] {
-  if (!value || typeof value !== "string") {
-    return [];
-  }
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
+import {
+  CreateIdeaInput,
+  ideaSchemas,
+} from "@/lib/zod";
 
 export async function createIdea(values: CreateIdeaInput) {
   const session = await getServerSession(authOptions);
@@ -29,13 +22,15 @@ export async function createIdea(values: CreateIdeaInput) {
     description: values.description,
     industry: values.industry || undefined,
     targetAudience: values.targetAudience,
+    primaryTargetMarket: values.primaryTargetMarket || undefined,
   });
 
   if (!parsed.success) {
     throw new Error("Validation failed");
   }
 
-  const { title, description, industry, targetAudience } = parsed.data;
+  const { title, description, industry, targetAudience, primaryTargetMarket } =
+    parsed.data;
 
   const idea = await prisma.idea.create({
     data: {
@@ -43,6 +38,7 @@ export async function createIdea(values: CreateIdeaInput) {
       description,
       industry: industry ?? null,
       targetAudience,
+      primaryTargetMarket: primaryTargetMarket ?? null,
       userId: session.user.id,
     },
   });
@@ -69,30 +65,38 @@ export async function deleteIdea(ideaId: string) {
   redirect("/ideas");
 }
 
-export async function updateIdea(ideaId: string, formData: FormData) {
+export async function updateIdea(ideaId: string, values: CreateIdeaInput) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     redirect("/auth");
   }
 
   const parsed = ideaSchemas.update.safeParse({
-    title: formData.get("title"),
-    description: formData.get("description"),
-    industry: formData.get("industry") || undefined,
-    targetAudience: parseTargetAudience(formData.get("targetAudience")),
+    title: values.title,
+    description: values.description,
+    industry: values.industry || undefined,
+    targetAudience: values.targetAudience,
+    primaryTargetMarket: values.primaryTargetMarket || undefined,
   });
 
   if (!parsed.success) {
     throw new Error("Validation failed");
   }
 
-  const { title, description, industry, targetAudience } = parsed.data;
+  const { title, description, industry, targetAudience, primaryTargetMarket } =
+    parsed.data;
 
   await prisma.idea.update({
     where: { id: ideaId, userId: session.user.id },
-    data: { title, description, industry: industry ?? null, targetAudience },
+    data: {
+      title,
+      description,
+      industry: industry ?? null,
+      targetAudience,
+      primaryTargetMarket: primaryTargetMarket ?? null,
+    },
   });
 
   revalidatePath("/ideas");
-  redirect(`/ideas/${ideaId}`);
+  revalidatePath(`/ideas/${ideaId}`);
 }

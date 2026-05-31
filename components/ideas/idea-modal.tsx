@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState, useTransition } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Building2, Loader2, Target, Type, Users } from "lucide-react";
+import { Building2, Globe, Loader2, Target, Type, Users } from "lucide-react";
 
-import { createIdea } from "@/app/(core)/ideas/actions";
+import { createIdea, updateIdea } from "@/app/(core)/ideas/actions";
+import type { IdeaListItem } from "@/components/ideas/ideas-view";
 import { Button } from "@/components/ui/button";
+import { CreatableCombobox } from "@/components/ui/creatable-combobox";
 import {
   Dialog,
   DialogContent,
@@ -17,33 +19,72 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CreateIdeaInput , ideaSchemas } from "@/lib/zod";
+import { PRIMARY_TARGET_MARKET_SUGGESTIONS } from "@/lib/idea-markets";
+import {
+  CreateIdeaFormValues,
+  ideaSchemas,
+  toCreateIdeaFormValues,
+  toCreateIdeaInput,
+} from "@/lib/zod";
+
+const emptyFormValues: CreateIdeaFormValues = {
+  title: "",
+  description: "",
+  industry: "",
+  targetAudience: "",
+  primaryTargetMarket: "",
+};
 
 type CreateIdeaModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  idea?: IdeaListItem | null;
 };
 
-export function CreateIdeaModal({ open, onOpenChange }: CreateIdeaModalProps) {
+export function IdeaModal({
+  open,
+  onOpenChange,
+  idea = null,
+}: CreateIdeaModalProps) {
+  const isEditing = idea != null;
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const form = useForm<CreateIdeaInput>({
-    resolver: zodResolver(ideaSchemas.create),
-    defaultValues: {
-      title: "",
-      description: "",
-      industry: "",
-      targetAudience: [],
-    },
+  const form = useForm<CreateIdeaFormValues>({
+    resolver: zodResolver(ideaSchemas.createClient),
+    defaultValues: emptyFormValues,
   });
 
-  function onSubmit(values: CreateIdeaInput) {
+  useEffect(() => {
+    if (open) {
+      form.reset(
+        isEditing
+          ? toCreateIdeaFormValues({
+              title: idea.title,
+              description: idea.description,
+              industry: idea.industry ?? undefined,
+              targetAudience: idea.targetAudience,
+              primaryTargetMarket: idea.primaryTargetMarket ?? undefined,
+            })
+          : emptyFormValues
+      );
+      setServerError(null);
+    }
+  }, [open, isEditing, idea, form]);
+
+  function onSubmit(values: CreateIdeaFormValues) {
     setServerError(null);
 
     startTransition(async () => {
       try {
-        await createIdea(values);
+        const payload = toCreateIdeaInput(values);
+
+        if (isEditing) {
+          await updateIdea(idea.id, payload);
+          onOpenChange(false);
+        } else {
+          await createIdea(payload);
+        }
       } catch {
         setServerError("Something went wrong. Please try again.");
       }
@@ -54,7 +95,7 @@ export function CreateIdeaModal({ open, onOpenChange }: CreateIdeaModalProps) {
     if (!isPending) {
       onOpenChange(next);
       if (!next) {
-        form.reset();
+        form.reset(emptyFormValues);
         setServerError(null);
       }
     }
@@ -62,13 +103,23 @@ export function CreateIdeaModal({ open, onOpenChange }: CreateIdeaModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-white/80 bg-white/95 sm:max-w-2xl">
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto border-white/80 bg-white/95 sm:max-w-2xl"
+        onPointerDownOutside={(event) => {
+          const target = event.target as HTMLElement;
+          if (target.closest('[data-slot="combobox-content"]')) {
+            event.preventDefault();
+          }
+        }}
+      >
         <DialogHeader className="gap-1 pb-2">
           <DialogTitle className="text-2xl font-semibold">
-            New startup idea
+            {isEditing ? "Edit startup idea" : "New startup idea"}
           </DialogTitle>
           <DialogDescription className="text-base">
-            Describe your concept, we&apos;ll help you validate it with AI.
+            {isEditing
+              ? "Update your concept details."
+              : "Describe your concept, we'll help you validate it with AI."}
           </DialogDescription>
         </DialogHeader>
 
@@ -136,6 +187,30 @@ export function CreateIdeaModal({ open, onOpenChange }: CreateIdeaModalProps) {
             />
           </FormField>
 
+          <FormField
+            id="primaryTargetMarket"
+            label="Primary target market"
+            icon={Globe}
+            error={form.formState.errors.primaryTargetMarket?.message}
+            hint="Pick a suggestion or type your own, e.g. Nordic Countries"
+            optional
+          >
+            <Controller
+              control={form.control}
+              name="primaryTargetMarket"
+              render={({ field }) => (
+                <CreatableCombobox
+                  id="primaryTargetMarket"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  suggestions={PRIMARY_TARGET_MARKET_SUGGESTIONS}
+                  placeholder="Global, India, United States…"
+                  aria-invalid={!!form.formState.errors.primaryTargetMarket}
+                />
+              )}
+            />
+          </FormField>
+
           {serverError ? (
             <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {serverError}
@@ -160,12 +235,12 @@ export function CreateIdeaModal({ open, onOpenChange }: CreateIdeaModalProps) {
               {isPending ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Creating…
+                  {isEditing ? "Saving…" : "Creating…"}
                 </>
               ) : (
                 <>
                   <Target className="size-4" />
-                  Create idea
+                  {isEditing ? "Save changes" : "Create idea"}
                 </>
               )}
             </Button>

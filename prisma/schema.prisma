@@ -23,8 +23,9 @@ model Idea {
   id             String   @id @default(cuid())
   title          String
   description    String   @db.Text
-  industry       String?
-  targetAudience String[]
+  industry             String?
+  targetAudience       String[]
+  primaryTargetMarket  String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
