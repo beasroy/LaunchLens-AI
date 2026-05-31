@@ -44,7 +44,9 @@ export async function createIdea(values: CreateIdeaInput) {
   });
 
   revalidatePath("/ideas");
-  redirect(`/ideas/${idea.id}`);
+  revalidatePath("/dashboard");
+
+  return { id: idea.id };
 }
 
 export async function deleteIdea(ideaId: string) {
@@ -62,7 +64,7 @@ export async function deleteIdea(ideaId: string) {
 
   await prisma.idea.delete({ where: { id, userId: session.user.id } });
   revalidatePath("/ideas");
-  redirect("/ideas");
+  revalidatePath("/dashboard");
 }
 
 export async function updateIdea(ideaId: string, values: CreateIdeaInput) {

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   Building2,
@@ -194,6 +195,7 @@ function IdeaCard({
   idea: IdeaListItem;
   onEdit: (idea: IdeaListItem) => void;
 }) {
+  const router = useRouter();
   const [isDeleting, startDeleteTransition] = useTransition();
 
   const preview =
@@ -226,6 +228,7 @@ function IdeaCard({
     startDeleteTransition(async () => {
       try {
         await deleteIdea(idea.id);
+        router.refresh();
       } catch {
         window.alert("Could not delete this idea. Please try again.");
       }

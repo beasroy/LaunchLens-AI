@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,6 +47,7 @@ export function IdeaModal({
   onOpenChange,
   idea = null,
 }: CreateIdeaModalProps) {
+  const router = useRouter();
   const isEditing = idea != null;
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -82,8 +84,11 @@ export function IdeaModal({
         if (isEditing) {
           await updateIdea(idea.id, payload);
           onOpenChange(false);
+          router.refresh();
         } else {
-          await createIdea(payload);
+          const { id } = await createIdea(payload);
+          onOpenChange(false);
+          router.push(`/ideas/${id}`);
         }
       } catch {
         setServerError("Something went wrong. Please try again.");
