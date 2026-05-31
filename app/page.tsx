@@ -1,8 +1,34 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Lightbulb, Shield, Sparkles, Zap } from "lucide-react";
 
 import { FloatingNavbar } from "@/components/layout/floating-navbar";
 import { Button } from "@/components/ui/button";
+import { siteConfig } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: {
+    absolute: siteConfig.title,
+  },
+  description: siteConfig.description,
+  keywords: [...siteConfig.keywords],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "/",
+    siteName: siteConfig.name,
+    title: siteConfig.title,
+    description: siteConfig.description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.title,
+    description: siteConfig.description,
+  },
+  alternates: {
+    canonical: "/",
+  },
+};
 
 export default function LandingPage() {
   return (

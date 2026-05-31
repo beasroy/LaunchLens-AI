@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 
 import {
@@ -7,7 +8,15 @@ import {
 } from "@/components/dashboard/dashboard-view";
 import { authOptions } from "@/lib/auth";
 import { getScoreBucket } from "@/lib/idea-scores";
+import { createPageMetadata } from "@/lib/metadata";
 import { prisma } from "@/lib/prisma";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Dashboard",
+  description: "Track validation progress and top-scoring startup ideas across your portfolio.",
+  path: "/dashboard",
+  noIndex: true,
+});
 
 function buildDashboardData(
   ideas: Array<{

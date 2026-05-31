@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
+import type { Metadata } from "next";
 import { ArrowLeft, Building2, Globe, Users } from "lucide-react";
 
 import { AnalysisResults, type SerializedAnalysis } from "@/components/ideas/analysis-results";
@@ -8,11 +9,49 @@ import { AnalysisRunner } from "@/components/ideas/analysis-runner";
 import { Badge } from "@/components/ui/badge";
 import { authOptions } from "@/lib/auth";
 import type { AnalysisResult } from "@/lib/analysis/schema";
+import { createPageMetadata } from "@/lib/metadata";
 import { prisma } from "@/lib/prisma";
 
 type PageProps = {
   params: Promise<{ id: string }>;
 };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return createPageMetadata({
+      title: "Idea",
+      path: "/ideas",
+      noIndex: true,
+    });
+  }
+
+  const { id } = await params;
+  const idea = await prisma.idea.findFirst({
+    where: { id, userId: session.user.id },
+    select: { title: true, description: true },
+  });
+
+  if (!idea) {
+    return createPageMetadata({
+      title: "Idea not found",
+      path: `/ideas/${id}`,
+      noIndex: true,
+    });
+  }
+
+  const description =
+    idea.description.length > 160
+      ? `${idea.description.slice(0, 157)}…`
+      : idea.description;
+
+  return createPageMetadata({
+    title: idea.title,
+    description,
+    path: `/ideas/${id}`,
+    noIndex: true,
+  });
+}
 
 function serializeAnalysis(analysis: {
   id: string;

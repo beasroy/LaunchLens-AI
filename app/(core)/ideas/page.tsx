@@ -1,8 +1,17 @@
+import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 
 import { IdeasView, type IdeaListItem } from "@/components/ideas/ideas-view";
 import { authOptions } from "@/lib/auth";
+import { createPageMetadata } from "@/lib/metadata";
 import { prisma } from "@/lib/prisma";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Your Ideas",
+  description: "Manage startup concepts and run AI validation for risks, competitors, and MVP paths.",
+  path: "/ideas",
+  noIndex: true,
+});
 
 export default async function IdeasPage() {
   const session = await getServerSession(authOptions);
