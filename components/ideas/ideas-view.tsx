@@ -33,6 +33,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { getScoreTone } from "@/lib/idea-scores";
 import { cn } from "@/lib/utils";
 
 export type IdeaListItem = {
@@ -63,25 +64,6 @@ function getIndustryIcon(industry: string | null): LucideIcon {
   return (
     INDUSTRY_ICONS.find(({ match }) => match.test(industry))?.icon ?? Rocket
   );
-}
-
-function getScoreTone(score: number) {
-  if (score >= 75) {
-    return {
-      badge: "bg-emerald-50 text-emerald-700 ring-emerald-200/60",
-      bar: "from-emerald-400 to-teal-500",
-    };
-  }
-  if (score >= 50) {
-    return {
-      badge: "bg-amber-50 text-amber-700 ring-amber-200/60",
-      bar: "from-amber-400 to-orange-500",
-    };
-  }
-  return {
-    badge: "bg-rose-50 text-rose-700 ring-rose-200/60",
-    bar: "from-rose-400 to-pink-500",
-  };
 }
 
 export function IdeasView({ ideas }: IdeasViewProps) {

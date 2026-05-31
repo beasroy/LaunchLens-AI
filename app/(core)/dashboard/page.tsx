@@ -1,16 +1,87 @@
-import { BarChart3, Lightbulb, TrendingUp } from "lucide-react";
-import Link from "next/link";
+import { getServerSession } from "next-auth";
 
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  DashboardView,
+  type DashboardIdea,
+  type DashboardStats,
+} from "@/components/dashboard/dashboard-view";
+import { authOptions } from "@/lib/auth";
+import { getScoreBucket } from "@/lib/idea-scores";
+import { prisma } from "@/lib/prisma";
 
-export default function DashboardPage() {
+function buildDashboardData(
+  ideas: Array<{
+    id: string;
+    title: string;
+    industry: string | null;
+    updatedAt: Date;
+    analyses: Array<{
+      validationScore: number | null;
+      problemStatement: string | null;
+    }>;
+  }>
+) {
+  const serialized: DashboardIdea[] = ideas.map((idea) => ({
+    id: idea.id,
+    title: idea.title,
+    industry: idea.industry,
+    latestScore: idea.analyses[0]?.validationScore ?? null,
+    problemStatement: idea.analyses[0]?.problemStatement ?? null,
+    updatedAt: idea.updatedAt.toISOString(),
+  }));
+
+  const validated = serialized.filter((idea) => idea.latestScore != null);
+  const pendingIdeas = serialized.filter((idea) => idea.latestScore == null);
+
+  const averageScore =
+    validated.length > 0
+      ? Math.round(
+          validated.reduce((sum, idea) => sum + idea.latestScore!, 0) /
+            validated.length
+        )
+      : null;
+
+  const scoreBreakdown = { strong: 0, moderate: 0, weak: 0 };
+  for (const idea of validated) {
+    scoreBreakdown[getScoreBucket(idea.latestScore!)]++;
+  }
+
+  const topIdeas = [...validated]
+    .sort((a, b) => b.latestScore! - a.latestScore!)
+    .slice(0, 3);
+
+  const stats: DashboardStats = {
+    totalIdeas: serialized.length,
+    validatedCount: validated.length,
+    pendingCount: pendingIdeas.length,
+    averageScore,
+    scoreBreakdown,
+  };
+
+  return { ideas: serialized, topIdeas, pendingIdeas, stats };
+}
+
+export default async function DashboardPage() {
+  const session = await getServerSession(authOptions);
+  const userId = session!.user!.id;
+
+  const ideas = await prisma.idea.findMany({
+    where: { userId },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      analyses: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: {
+          validationScore: true,
+          problemStatement: true,
+        },
+      },
+    },
+  });
+
+  const dashboard = buildDashboardData(ideas);
+
   return (
     <div className="flex min-h-screen flex-1 flex-col">
       <header className="border-b border-indigo-100/60 bg-white/50 px-6 py-8 backdrop-blur-sm lg:px-10">
@@ -23,34 +94,7 @@ export default function DashboardPage() {
       </header>
 
       <div className="flex-1 px-6 py-8 lg:px-10">
-        <div className="grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <Card className="border-white/80 bg-white/90 gemini-card-glow">
-            <CardHeader>
-              <Lightbulb className="mb-2 size-8 text-indigo-600" />
-              <CardTitle>Your ideas</CardTitle>
-              <CardDescription>Manage and validate concepts</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="rounded-xl gemini-btn-gradient w-full" asChild>
-                <Link href="/ideas">Go to ideas</Link>
-              </Button>
-            </CardContent>
-          </Card>
-          <Card className="border-white/80 bg-white/90 opacity-80">
-            <CardHeader>
-              <TrendingUp className="mb-2 size-8 text-indigo-400" />
-              <CardTitle>Validation scores</CardTitle>
-              <CardDescription>Coming soon</CardDescription>
-            </CardHeader>
-          </Card>
-          <Card className="border-white/80 bg-white/90 opacity-80 sm:col-span-2 lg:col-span-1">
-            <CardHeader>
-              <BarChart3 className="mb-2 size-8 text-indigo-400" />
-              <CardTitle>Analytics</CardTitle>
-              <CardDescription>Coming soon</CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
+        <DashboardView {...dashboard} />
       </div>
     </div>
   );
