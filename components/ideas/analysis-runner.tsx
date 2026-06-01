@@ -9,6 +9,12 @@ import { cn } from "@/lib/utils";
 
 type AnalysisPhase = "idle" | "searching" | "generating" | "saving" | "done" | "error";
 
+type ActiveModel = {
+  modelId: string;
+  label: string;
+  isFallback: boolean;
+};
+
 type AnalysisRunnerProps = {
   ideaId: string;
   hasAnalysis: boolean;
@@ -46,6 +52,7 @@ export function AnalysisRunner({ ideaId, hasAnalysis }: AnalysisRunnerProps) {
     queries: [],
     titles: [],
   });
+  const [activeModel, setActiveModel] = useState<ActiveModel | null>(null);
 
   const isRunning = phase === "searching" || phase === "generating" || phase === "saving";
 
@@ -53,6 +60,7 @@ export function AnalysisRunner({ ideaId, hasAnalysis }: AnalysisRunnerProps) {
     setPhase("searching");
     setError(null);
     setPreview("");
+    setActiveModel(null);
     setSources({ queries: [], titles: [] });
 
     try {
@@ -92,6 +100,16 @@ export function AnalysisRunner({ ideaId, hasAnalysis }: AnalysisRunnerProps) {
 
           if (parsed.event === "status" && typeof payload.phase === "string") {
             setPhase(payload.phase as AnalysisPhase);
+          } else if (
+            parsed.event === "model" &&
+            typeof payload.label === "string" &&
+            typeof payload.modelId === "string"
+          ) {
+            setActiveModel({
+              modelId: payload.modelId as string,
+              label: payload.label as string,
+              isFallback: Boolean(payload.isFallback),
+            });
           } else if (parsed.event === "delta" && typeof payload.text === "string") {
             setPreview(payload.text);
           } else if (parsed.event === "sources") {
@@ -147,6 +165,19 @@ export function AnalysisRunner({ ideaId, hasAnalysis }: AnalysisRunnerProps) {
           <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin text-indigo-500" />
             {PHASE_LABELS[phase as keyof typeof PHASE_LABELS]}
+          </span>
+        ) : null}
+        {activeModel ? (
+          <span
+            className={cn(
+              "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium",
+              activeModel.isFallback
+                ? "border border-amber-200 bg-amber-50 text-amber-800"
+                : "border border-indigo-100 bg-indigo-50 text-indigo-700"
+            )}
+          >
+            {activeModel.isFallback ? "Fallback: " : "Model: "}
+            {activeModel.label}
           </span>
         ) : null}
       </div>

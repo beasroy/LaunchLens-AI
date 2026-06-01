@@ -67,6 +67,12 @@ export async function POST(_request: Request, context: RouteContext) {
         for await (const chunk of streamAnalysis(idea)) {
           if (chunk.type === "status") {
             send("status", { phase: chunk.phase });
+          } else if (chunk.type === "model") {
+            send("model", {
+              modelId: chunk.modelId,
+              label: chunk.label,
+              isFallback: chunk.isFallback,
+            });
           } else if (chunk.type === "delta") {
             send("delta", { text: chunk.text });
           } else if (chunk.type === "sources") {
