@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import axios, { isAxiosError } from "axios";
 import { signIn } from "next-auth/react";
@@ -18,6 +18,7 @@ type Mode = "signin" | "signup";
 
 export function AuthForm() {
   const router = useRouter();
+  const [isNavigating, startTransition] = useTransition();
   const [mode, setMode] = useState<Mode>("signin");
   const [seePassword, setSeePassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -34,6 +35,7 @@ export function AuthForm() {
 
   const activeForm = mode === "signin" ? signInForm : signUpForm;
   const isSubmitting = activeForm.formState.isSubmitting;
+  const isSigningIn = mode === "signin" && (isSubmitting || isNavigating);
 
   async function onSignIn(values: SignInInput) {
     setServerError(null);
@@ -49,8 +51,10 @@ export function AuthForm() {
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    startTransition(() => {
+      router.push("/dashboard");
+      router.refresh();
+    });
   }
 
   async function onSignUp(values: SignUpInput) {
@@ -79,13 +83,26 @@ export function AuthForm() {
   }
 
   return (
-    <div className="rounded-2xl border border-white/80 bg-white/90 p-6 shadow-xl shadow-indigo-500/5 backdrop-blur-xl gemini-card-glow sm:p-8">
+    <div className="relative rounded-2xl border border-white/80 bg-white/90 p-6 shadow-xl shadow-indigo-500/5 backdrop-blur-xl gemini-card-glow sm:p-8">
+      {isNavigating ? (
+        <div
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-2xl bg-white/90 backdrop-blur-sm"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <Loader2 className="size-8 animate-spin text-indigo-600" />
+          <p className="text-sm font-medium text-indigo-700">
+            Opening your workspace…
+          </p>
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-1 rounded-xl bg-indigo-50/80 p-1 ring-1 ring-indigo-100/80">
         {(["signin", "signup"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => switchMode(tab)}
+            disabled={isSigningIn}
             className={cn(
               "rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
               mode === tab
@@ -104,6 +121,7 @@ export function AuthForm() {
             onSubmit={signInForm.handleSubmit(onSignIn)}
             className="space-y-4"
             noValidate
+            aria-busy={isSigningIn}
           >
             <Field
               id="signin-email"
@@ -116,6 +134,7 @@ export function AuthForm() {
                 autoComplete="email"
                 className="h-11 rounded-xl border-indigo-100 bg-white/80"
                 aria-invalid={!!signInForm.formState.errors.email}
+                disabled={isSigningIn}
                 {...signInForm.register("email")}
               />
             </Field>
@@ -130,6 +149,7 @@ export function AuthForm() {
                 onToggle={() => setSeePassword(!seePassword)}
                 autoComplete="current-password"
                 error={!!signInForm.formState.errors.password}
+                disabled={isSigningIn}
                 registerProps={signInForm.register("password")}
               />
             </Field>
@@ -137,9 +157,9 @@ export function AuthForm() {
             <Button
               type="submit"
               className="h-11 w-full rounded-xl gemini-btn-gradient"
-              disabled={isSubmitting}
+              disabled={isSigningIn}
             >
-              {isSubmitting ? (
+              {isSigningIn ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
                   Signing in…
@@ -226,6 +246,7 @@ function PasswordInput({
   onToggle,
   autoComplete,
   error,
+  disabled,
   registerProps,
 }: {
   id: string;
@@ -233,6 +254,7 @@ function PasswordInput({
   onToggle: () => void;
   autoComplete: string;
   error: boolean;
+  disabled?: boolean;
   registerProps: UseFormRegisterReturn<"password">;
 }) {
   return (
@@ -242,6 +264,7 @@ function PasswordInput({
         type={seePassword ? "text" : "password"}
         autoComplete={autoComplete}
         aria-invalid={error}
+        disabled={disabled}
         className="h-11 rounded-xl border-indigo-100 bg-white/80 pr-10"
         {...registerProps}
       />
