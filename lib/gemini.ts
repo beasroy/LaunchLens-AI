@@ -16,11 +16,12 @@ export type AnalysisModelConfig = {
 };
 
 
-/** Ordered for free tier: primary first, then models with remaining quota (see AI Studio → Rate limits). */
+
 export const ANALYSIS_MODEL_CHAIN: AnalysisModelConfig[] = [
   { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+  { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite" },
   { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
-  { id: "gemini-1.5-flash", label: "Gemini 1.5 Flash" },
+  { id: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite" },
 ];
 
 export const ANALYSIS_MODEL = ANALYSIS_MODEL_CHAIN[0].id;
