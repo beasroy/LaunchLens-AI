@@ -94,7 +94,7 @@ function AnalysisCard({ analysis }: { analysis: SerializedAnalysis }) {
           Validation score: {score}/100
         </div>
         <span className="text-sm text-muted-foreground">
-          {new Date(analysis.createdAt).toLocaleString()}
+          {new Date(analysis.createdAt).toLocaleString("en-IN")}
         </span>
       </div>
 
